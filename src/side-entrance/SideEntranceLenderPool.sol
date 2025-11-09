@@ -37,6 +37,7 @@ contract SideEntranceLenderPool {
 
         IFlashLoanEtherReceiver(msg.sender).execute{value: amount}();
 
+        // @audit-issue contract should pull instead of waiting for you to repay as it can't be sure you did and for this cause if you deposited in your execute function it counts as loan-repaid
         if (address(this).balance < balanceBefore) {
             revert RepayFailed();
         }
