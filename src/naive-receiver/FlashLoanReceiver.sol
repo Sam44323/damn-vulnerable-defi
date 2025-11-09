@@ -24,6 +24,8 @@ contract FlashLoanReceiver is IERC3156FlashBorrower {
             }
         }
 
+        // @audit-issue doesn't quite check who initiated the flash-loan
+
         if (token != address(NaiveReceiverPool(pool).weth())) revert NaiveReceiverPool.UnsupportedCurrency();
 
         uint256 amountToBeRepaid;
