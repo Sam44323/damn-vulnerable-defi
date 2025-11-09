@@ -25,7 +25,7 @@ contract TrusterLenderPool is ReentrancyGuard {
         uint256 balanceBefore = token.balanceOf(address(this));
 
         token.transfer(borrower, amount);
-        target.functionCall(data);
+        target.functionCall(data); // @audit-issue unchecked ext-call
 
         if (token.balanceOf(address(this)) < balanceBefore) {
             revert RepayFailed();
