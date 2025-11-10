@@ -161,6 +161,7 @@ contract TheRewarderChallenge is Test {
     bytes32[] memory dvtProof;
     for (uint256 i = 0; i < dvtRewards.length; i++) {
         if (dvtRewards[i].beneficiary == player) {
+            // getting the player claimable amt from this proof of DVT
             dvtAmount = dvtRewards[i].amount;
             dvtProof = merkle.getProof(dvtLeaves, i);
             break;
@@ -171,12 +172,14 @@ contract TheRewarderChallenge is Test {
     bytes32[] memory wethProof;
     for (uint256 i = 0; i < wethRewards.length; i++) {
         if (wethRewards[i].beneficiary == player) {
+            // getting the player claimable amt from this proof of WETH
             wethAmount = wethRewards[i].amount;
             wethProof = merkle.getProof(wethLeaves, i);
             break;
         }
     }
 
+    // calculating how many claims are needed to drain the distributor
     uint256 dvtClaimsNeeded = TOTAL_DVT_DISTRIBUTION_AMOUNT / dvtAmount;
     uint256 wethClaimsNeeded = TOTAL_WETH_DISTRIBUTION_AMOUNT / wethAmount;
     uint256 totalClaimsNeeded = dvtClaimsNeeded + wethClaimsNeeded;
@@ -191,6 +194,8 @@ contract TheRewarderChallenge is Test {
                 proof: dvtProof
             });
         } else {
+            // run this section when are we done with dvt-claims
+            
             claims[i] = Claim({
                 batchNumber: 0,
                 amount: wethAmount,
