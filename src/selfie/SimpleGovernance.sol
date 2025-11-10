@@ -20,6 +20,7 @@ contract SimpleGovernance is ISimpleGovernance {
         _actionCounter = 1;
     }
 
+    // @audit-issue the governance allows anyone with DVT tokens to queue without checking the holding-duration, so if someone takes a flash-loan from the SelfiePool, they can queue a malicious action and drain it completely
     function queueAction(address target, uint128 value, bytes calldata data) external returns (uint256 actionId) {
         if (!_hasEnoughVotes(msg.sender)) {
             revert NotEnoughVotes(msg.sender);
