@@ -11,6 +11,7 @@ import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 struct Distribution {
     uint256 remaining;
     uint256 nextBatchNumber;
+    // so a token can have multiple distributions over-time with each having its batchNumber<->merkle-root mapping
     mapping(uint256 batchNumber => bytes32 root) roots;
     mapping(address claimer => mapping(uint256 word => uint256 bits)) claims;
 }
@@ -18,8 +19,8 @@ struct Distribution {
 struct Claim {
     uint256 batchNumber;
     uint256 amount;
-    uint256 tokenIndex;
-    bytes32[] proof;
+    uint256 tokenIndex; // tokenIndex from the list to claim
+    bytes32[] proof; // proof for the claim
 }
 
 /**
@@ -81,26 +82,31 @@ contract TheRewarderDistributor {
     function claimRewards(Claim[] memory inputClaims, IERC20[] memory inputTokens) external {
         Claim memory inputClaim;
         IERC20 token;
-        uint256 bitsSet; // accumulator
+        uint256 bitsSet;
         uint256 amount;
 
         for (uint256 i = 0; i < inputClaims.length; i++) {
             inputClaim = inputClaims[i];
 
-            uint256 wordPosition = inputClaim.batchNumber / 256;
-            uint256 bitPosition = inputClaim.batchNumber % 256;
+            uint256 wordPosition = inputClaim.batchNumber / 256; // row's-position
+            uint256 bitPosition = inputClaim.batchNumber % 256; // item-position in that row
+
+            // @audit-issue because the function marks as claimed only when switching to a different token or at the last-claim, we can have multiple-claims and accumulate them without marking as claimed and drain the contract
 
             if (token != inputTokens[inputClaim.tokenIndex]) {
+
+                // @note happens before switching to a diff-token
                 if (address(token) != address(0)) {
                     if (!_setClaimed(token, amount, wordPosition, bitsSet)) revert AlreadyClaimed();
                 }
 
                 token = inputTokens[inputClaim.tokenIndex];
-                bitsSet = 1 << bitPosition; // set bit at given position
+
+                bitsSet = 1 << bitPosition;
                 amount = inputClaim.amount;
             } else {
-                bitsSet = bitsSet | 1 << bitPosition;
-                amount += inputClaim.amount;
+                bitsSet = bitsSet | 1 << bitPosition; // to the existing bitsSet adding another claim to it at that position
+                amount += inputClaim.amount; // increasing the amt to be claimed
             }
 
             // for the last claim
@@ -119,10 +125,12 @@ contract TheRewarderDistributor {
 
     function _setClaimed(IERC20 token, uint256 amount, uint256 wordPosition, uint256 newBits) private returns (bool) {
         uint256 currentWord = distributions[token].claims[msg.sender][wordPosition];
+
+        // &-operation, if 1 then there is a double-claiming attempt
         if ((currentWord & newBits) != 0) return false;
 
-        // update state
-        distributions[token].claims[msg.sender][wordPosition] = currentWord | newBits;
+    
+        distributions[token].claims[msg.sender][wordPosition] = currentWord | newBits; // adding the fresh-claimed
         distributions[token].remaining -= amount;
 
         return true;
