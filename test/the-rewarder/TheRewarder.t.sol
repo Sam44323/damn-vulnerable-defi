@@ -194,7 +194,7 @@ contract TheRewarderChallenge is Test {
                 proof: dvtProof
             });
         } else {
-            // run this section when are we done with dvt-claims
+            // run this section when are we done with DVT-claims
             
             claims[i] = Claim({
                 batchNumber: 0,
