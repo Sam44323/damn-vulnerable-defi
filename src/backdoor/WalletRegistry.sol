@@ -65,6 +65,8 @@ contract WalletRegistry is IProxyCreationCallback, Ownable {
      *          setting the registry's address as the callback.
      */
     function proxyCreated(SafeProxy proxy, address singleton, bytes calldata initializer, uint256) external override {
+        // have available-funds
+        
         if (token.balanceOf(address(this)) < PAYMENT_AMOUNT) {
             // fail early
             revert NotEnoughFunds();
