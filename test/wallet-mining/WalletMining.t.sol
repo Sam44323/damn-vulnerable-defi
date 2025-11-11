@@ -157,7 +157,25 @@ contract WalletMiningChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_walletMining() public checkSolvedByPlayer {
+        /**
+         Swap a large amount of DVT tokens (110 DVT) for WETH through Uniswap V3
         
+         This pushes the price outside the concentrated liquidity range (ticks -60 to +60), causing a catastrophic price collapse to extreme negative tick values
+        
+        Manipulate block time to +114 seconds to maximise the TWAP manipulation while staying within the time limit
+        
+        The manipulated TWAP makes DVT appear extremely devalued compared to WETH
+        
+        Convert ETH to WETH for collateral
+        
+        Calculate the now minimal required collateral (reduced from 3,000,000 WETH to just 0.143 WETH)
+        
+        Approve and deposit this minimal WETH as collateral
+        
+        Borrow the entire DVT balance (1,000,000 tokens) from the lending pool
+        
+        Transfer all tokens to the recovery address
+         */
     }
 
     /**
