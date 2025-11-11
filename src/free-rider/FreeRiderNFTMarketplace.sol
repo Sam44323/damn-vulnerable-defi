@@ -102,8 +102,10 @@ contract FreeRiderNFTMarketplace is ReentrancyGuard {
 
         // transfer from seller to buyer
         DamnValuableNFT _token = token; // cache for gas savings
+
         _token.safeTransferFrom(_token.ownerOf(tokenId), msg.sender, tokenId);
 
+        // @audit-issue this contract attempts to pay the seller after trnsfering the NFT but forget that the ownership has already chnged
         // pay seller using cached token
         payable(_token.ownerOf(tokenId)).sendValue(priceToPay);
 
