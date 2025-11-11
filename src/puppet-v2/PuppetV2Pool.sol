@@ -34,6 +34,7 @@ contract PuppetV2Pool {
      */
     function borrow(uint256 borrowAmount) external {
         // Calculate how much WETH the user must deposit
+        // @audit-issue vulnerable to manipulation-oracle attack
         uint256 amount = calculateDepositOfWETHRequired(borrowAmount);
 
         // Take the WETH
